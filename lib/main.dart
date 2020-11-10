@@ -33,28 +33,50 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   void registeredTransaction() {
+    BharatXCommonUtilManager.showBharatXProgressDialog();
     String transactionId = DateTime.now()
         .millisecondsSinceEpoch
         .toString(); // dummy; fetch from server
-    BharatXCommonUtilManager.registerTransactionId(transactionId, () {
+    final onRegistered = () async {
+      // transaction ID registered successfully
+      await BharatXCommonUtilManager.closeBharatXProgressDialog();
       BharatXCommonUtilManager.showTransactionStatusDialog(true, () {});
-    }, () {
+    };
+
+    final onFailure = () async {
+      // registering this transaction failed
+      await BharatXCommonUtilManager.closeBharatXProgressDialog();
       BharatXCommonUtilManager.showTransactionStatusDialog(false, () {});
-    });
+    };
+
+    BharatXCommonUtilManager.registerTransactionId(
+        transactionId, onRegistered, onFailure);
   }
 
   void startTransaction() async {
-    BharatXStartupTierManager.initialize(
+    await BharatXStartupTierManager.initialize(
         "testPartnerId", "testApiKey", Colors.deepOrange);
     BharatXCommonUtilManager.registerCreditAccess();
-    BharatXCommonUtilManager.confirmTransactionWithUser(10000, () {
+    final onUserConfirmedTransaction = () {
+      // user confirmed that they want to proceed with the transaction!
       registeredTransaction();
-    }, () {
+    };
+
+    final onUserAcceptedPrivacyPolicy = () {
+      // user accepted privacy policy
       AlternateDataManager.register();
-    }, () {
+    };
+
+    final onUserCancelledTransaction = () {
+      // user cancelled transaction. allow user to choose other payment options
       Scaffold.of(context).showSnackBar(
           SnackBar(content: Text("You cancelled the transaction")));
-    });
+    };
+    BharatXCommonUtilManager.confirmTransactionWithUser(
+        10000,
+        onUserConfirmedTransaction,
+        onUserAcceptedPrivacyPolicy,
+        onUserCancelledTransaction);
   }
 
   @override
